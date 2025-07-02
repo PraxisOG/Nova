@@ -14,8 +14,8 @@ import lmstudio as lms
 from tools.registry import load_tools_with_metadata
 
 def load_txt(filename):
-        with open(filename, 'r', encoding='utf-8') as f:
-            return f.read()
+    with open(filename, 'r', encoding='utf-8') as f:
+        return f.read()
 
 class ChatWorker(QObject):
     fragment_signal = pyqtSignal(str)
@@ -29,9 +29,9 @@ class ChatWorker(QObject):
 
     def process_message(self, user_msg):
         # Add to chat history
-        self.chat_a.add_user_message(user_msg)
+        self.chat_a.add_user_message("User: " + user_msg)
 
-        # Load tools and update UI
+        # Load tools and update UI when loading in
         tools_metadata = load_tools_with_metadata()
         self.tool_list_signal.emit(tools_metadata)
 
@@ -39,12 +39,16 @@ class ChatWorker(QObject):
         tools = [tool["function"] for tool in tools_metadata]
 
         # Allows streaming from .act
+        full_response = []
+
         def print_fragment(fragment, round_index):
-            self.fragment_signal.emit(fragment.content)
+            content = fragment.content
+            full_response.append(content)
+            self.fragment_signal.emit(content)
 
         # Changes between slower and faster models
         if self.speed_mode:
-            tempmodel = "qwen3-4b"
+            tempmodel = "qwen/qwen3-14b"
         else:
             tempmodel = "qwen3-32b"
 
@@ -56,6 +60,16 @@ class ChatWorker(QObject):
             on_prediction_fragment=print_fragment
         )
 
+        # Load tools and update UI after a tool use
+        tools_metadata = load_tools_with_metadata()
+        self.tool_list_signal.emit(tools_metadata)
+
+        # Add assistant's full response to chat history after streaming completes
+        if full_response:
+            full_response_text = ''.join(full_response)
+            self.chat_a.add_assistant_response(full_response_text)
+
+        
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -72,11 +86,11 @@ class MainWindow(QMainWindow):
         self.send_button.clicked.connect(self.handle_send)
         
         # Model selection controls
-        self.speed_mode_checkbox = QCheckBox("Speed Mode (Qwen MOE)")
-        self.speed_mode_checkbox.setChecked(True)
+        self.speed_mode_checkbox = QCheckBox("Speed Mode - Qwen 12b")
+        self.speed_mode_checkbox.setChecked(False)
         
         self.chat_a = lms.Chat()
-        self.model_a = lms.llm("qwen3-4b")
+        self.model_a = lms.llm("qwen3-32b")
 
         # Setup Instructions for Scriptwriting
         instruction_file = "context/Scriptwriting_inst.txt"
@@ -128,7 +142,7 @@ class MainWindow(QMainWindow):
         self.input_field.clear()
         
         # Add user message to history
-        self.chat_history.append(f"<b>You: </b> {user_msg}")
+        self.chat_history.append(f"<b>User: </b> {user_msg}")
         
         # Create and start worker thread
         self.worker_thread = ChatWorker(
