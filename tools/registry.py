@@ -4,7 +4,6 @@ import os
 def load_tools_with_metadata():
     tools = []
     folder = "tools"
-    # List Python files ignoring special files
     tool_modules = [
         f[:-3] for f in os.listdir(folder)
         if f.endswith(".py") and not f.startswith("__") and f not in {"registry.py", "decorators.py"}

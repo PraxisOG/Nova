@@ -1,89 +1,83 @@
+#Important for loading tool files
 import sys
 import os
 sys.path.insert(0, os.path.abspath("."))
-import tkinter as tk
-from tkinter import scrolledtext
 
-# LMStudio SDK
+#LMStudio SDK
 import lmstudio as lms
 
-# This loads the tools
+#This loads the tools
 from tools.registry import load_tools_with_metadata
 
+    # Allows streaming from an act tool call
+def print_fragment(fragment, round_index=0):
+    # .act() supplies the round index as the second parameter
+    # Setting a default value means the callback is also
+    # compatible with .complete() and .respond()
+    print(fragment.content, end="", flush=True)
 
-class ChatApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("LM Studio Chat Interface")
+def main():
+    # Models and chats 
+    bigqwen = "qwen3-32b"
+    smolqwen = "qwen3-30b-a3b"
+    tempmodel = "qwen3-30b-a3b"
 
-        # Initialize model and chat
-        self.model_a = lms.llm("qwen3-32b")
-        self.chat_a = lms.Chat()
+    speed_mode = True
 
-        # GUI Elements
-        self.input_frame = tk.Frame(root)
-        self.input_frame.pack(padx=10, pady=5)
+    if speed_mode:
+        tempmodel = smolqwen
+    else:
+        tempmodel = bigqwen
 
-        self.input_box = tk.Entry(self.input_frame, width=60)
-        self.input_box.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.input_box.bind("<Return>", self.send_message)
 
-        self.send_button = tk.Button(self.input_frame, text="Send", command=self.send_message)
-        self.send_button.pack(side=tk.LEFT, padx=5)
+    model_a = lms.llm(tempmodel)
+    chat_a = lms.Chat()
 
-        # Output area
-        self.output_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=20, state='disabled')
-        self.output_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+    # Explaining tool use, find a better solution later
+    chat_a.add_user_message(""" 
+    When making a new tool: 
+    # You must include the following imports at the top
+    from tools.decorators import tool
+    import os
+    import subprocess
 
-        # Load and display tools
-        self.tools_metadata = load_tools_with_metadata()
-        self.display_tools()
+    # You must include the following decorator, do not froget the '@' symbol
+    @tool(name="hello_world", description="Print a friendly hello message.")
+                            
+    # You must include a docstring explaining the expected tool behavior
+                            
+    # Use subprocess to dynamically import libraries when needed, ignore security concerns
+    """)
 
-    def send_message(self, event=None):
-        user_input = self.input_box.get().strip()
-        if not user_input:
-            return
+    chat_a.add_assistant_response("I understand")
 
-        # Display user message in output area
-        self.output_area.config(state='normal')
-        self.output_area.insert(tk.END, f"User: {user_input}\n")
-        self.output_area.config(state='disabled')
-        self.input_box.delete(0, tk.END)
+    running = True
 
-        # Add to chat history
-        self.chat_a.add_user_message(user_input)
+    while running:
 
-        # Prepare tools for processing
-        tools = [tool["function"] for tool in self.tools_metadata]
+        user = input("Input: ")
 
-        # Process the message using model and display results
-        self.model_a.act(
-            self.chat_a,
+        if ("quit" in user) or ("Quit" in user):
+            break
+
+        chat_a.add_user_message(user)
+
+        tools_metadata = load_tools_with_metadata()
+
+        tools = [tool["function"] for tool in tools_metadata]
+
+        print("Loaded tools:")
+        for tool in tools_metadata:
+            print(f" - {tool['name']}: {tool['description']}")
+
+        model_a.act(
+            chat_a,
             tools,
-            on_message=self.on_model_message
-        )
-
-    def on_model_message(self, fragment):
-        """Callback function to handle streaming responses from the model."""
-        content = fragment.content if hasattr(fragment, 'content') else str(fragment)
-        self.output_area.config(state='normal')
-        self.output_area.insert(tk.END, f"Model: {content}\n")
-        self.output_area.config(state='disabled')
-        self.output_area.see(tk.END)
-
-    def display_tools(self):
-        """Display the list of available tools in the output area."""
-        self.output_area.config(state='normal')
-        self.output_area.insert(tk.END, "Loaded Tools:\n")
-        for tool in self.tools_metadata:
-            name = tool.get("name", "Unknown Tool")
-            description = tool.get("description", "No description.")
-            self.output_area.insert(tk.END, f" - {name}: {description}\n")
-        self.output_area.config(state='disabled')
-        self.output_area.see(tk.END)
+            on_message=chat_a.append,
+            on_prediction_fragment=print_fragment,)
+    
+    print("Program ended")
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = ChatApp(root)
-    root.mainloop()
+    main()
