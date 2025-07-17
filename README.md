@@ -4,9 +4,7 @@ Nimble Outgrowth Virtual Assistant: Giving LLMs the ability to write their own t
 
 ## Overview 💡
 
-NOVA is a self-evolving, general-purpose AI agent designed to expand its own capabilities through autonomous code generation and problem solving. It's built on the principle of continuous learning and adaptation, striving to become a more versatile and intelligent assistant through tool use and adaptabliity. Think of it as an early take on emergent intelligence using LLMs.
-
-This project explores the fascinating intersection of Large Language Models (LLMs), self-modification, and autonomous agency. NOVA isn’t just *running* code; it's *writing* its own to overcome challenges and unlock new functionalities. 
+NOVA is a self-evolving, general-purpose AI agent designed to expand its own capabilities through autonomous code generation and problem solving. 
 
 **Key Features:**
 
@@ -15,5 +13,8 @@ This project explores the fascinating intersection of Large Language Models (LLM
 *   **Continuous Evolution:**  Learns from its experiences and refines its codebase for improved performance.
 *   **General Purpose Design:** Capable of tackling a wide range of tasks with the right tools
 
+## Requirements
+Nova is based on the LM Studio Python SDK, so make sure to have it installed, alongside Qwen 3 models 32b and A3B at q4 quantizations. For that reason it reccomended to have 24gb+ vram. It is pretty easy to edit the code to use less resource intensive models, though tool use is a must. 
+
 ## Installation ⚙️
-Instructions pending
+Load the code in your IDE and hit run. Proper instructions pending.
